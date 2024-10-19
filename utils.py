@@ -1,19 +1,28 @@
-# utils.py
+#util_aws.py
 
 import config
+import boto3
 from github import Github
-from langchain import PromptTemplate, LLMChain
-from langchain.chat_models import ChatOpenAI
+from langchain_aws import BedrockLLM
+from langchain_core.prompts import PromptTemplate
+from langchain.chains import LLMChain
 import tiktoken
+
 
 # Initialize the GitHub API client
 github = Github(config.GITHUB_API_TOKEN)
 
-# Initialize the OpenAI Chat LLM
-llm = ChatOpenAI(
-    openai_api_key=config.OPENAI_API_KEY,
-    temperature=0.7,
-    model_name="gpt-3.5-turbo-16k"
+# Initialize the Bedrock Client
+bedrock_runtime = boto3.client('bedrock-runtime', region_name=config.AWS_REGION)
+
+# Initialize the Bedrock LLM
+llm = BedrockLLM(
+    model_id="anthropic.claude-v2",
+    client=bedrock_runtime,
+    model_kwargs={
+        "temperature": 0.7,
+        "max_tokens_to_sample": 500
+    }
 )
 
 def truncate_text(text, max_tokens):
@@ -31,7 +40,7 @@ def summarize_text(text, max_tokens=500):
     text = truncate_text(text, max_input_tokens)
 
     prompt = f"Please provide a concise summary (max {max_tokens} words) of the following text:\n\n{text}"
-    summary = llm.predict(prompt)
+    summary = llm.invoke(prompt)
     return summary
 
 def get_recommended_projects(tech_stack, interest_areas):
